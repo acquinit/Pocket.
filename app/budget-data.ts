@@ -2,14 +2,14 @@ import { z } from 'zod';
 export const categories={
 Income:['Paycheck 1','Paycheck 2'],
 Expenses:['Food','Drinks','Snacks','Drinking Water','Internet','Groceries','Wet/Dry Market','Transportation','Load','Laundry','Debt Payment','Subscription'],
-Bills:['House Rent','Electricity Bill','Water Bill','Loan'],
+Bills:['House Rent','Electricity Bill','Water Bill','Loan','Internet'],
 Savings:['Wedding','Extra Savings','Emergency Fund']
 } as const;
 export type Group=keyof typeof categories;
 export const groups=Object.keys(categories) as Group[];
 export function validDate(s:string){return /^\d{4}-\d{2}-\d{2}$/.test(s)&&!isNaN(Date.parse(s))&&new Date(s).toISOString().slice(0,10)===s;}
 export function cents(s:string){if(!/^\d+(\.\d{1,2})?$/.test(s.trim()))return null;const [a,b='']=s.trim().split('.');const n=Number(a)*100+Number(b.padEnd(2,'0'));return Number.isSafeInteger(n)&&n>0&&n<=100000000000?n:null;}
-export const transactionSchema=z.object({amount:z.number().int().positive().max(100000000000),group:z.enum(['Income','Expenses','Bills','Savings']),category:z.string(),date:z.string().refine(validDate),note:z.string().max(200)}).refine(v=>(categories[v.group] as readonly string[]).includes(v.category),'Choose a valid subcategory');
+export const transactionSchema=z.object({amount:z.number().int().positive().max(100000000000),group:z.enum(['Income','Expenses','Bills','Savings']),category:z.string(),date:z.string().refine(validDate),time:z.string().regex(/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/).optional(),note:z.string().max(200)}).refine(v=>(categories[v.group] as readonly string[]).includes(v.category),'Choose a valid subcategory');
 export const templateSchema=z.object({amount:z.number().int().positive().max(100000000000),group:z.enum(['Income','Expenses','Bills','Savings']),category:z.string(),name:z.string().trim().min(1).max(60),note:z.string().max(200)}).refine(v=>(categories[v.group] as readonly string[]).includes(v.category),'Choose a valid subcategory');
 export const budgetSchema=z.object({amount:z.number().int().min(0).max(100000000000),month:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)});
 export type Txn=z.infer<typeof transactionSchema>;
@@ -30,3 +30,5 @@ export function parseEntry(text:string){
  const amount=cents(raw.replaceAll(',',''));if(amount===null)return null;
  return {amount,group,category,note:text.trim().slice(0,200)};
 }
+
+

@@ -10,11 +10,11 @@ const cookie=login.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');
 assert.ok(cookie,'local sign-in cookie');
 const headers={'Content-Type':'application/json',Origin:base,Cookie:cookie};
 const post=b=>fetch(base+'/api/records',{method:'POST',headers,body:JSON.stringify(b)});
-const id=crypto.randomUUID(),payload={amount:12345,group:'Expenses',category:'Food',date:'2026-10-16',note:'automated-test'};
+const id=crypto.randomUUID(),payload={amount:12345,group:'Expenses',category:'Food',date:'2026-10-16',time:'19:49:16',note:'automated-test'};
 assert.equal((await fetch(base+'/api/records')).status,401,'reject unauthenticated reads');
 assert.equal((await post({action:'save',id,kind:'transaction',version:0,payload})).status,200,'create');
 let records=(await (await fetch(base+'/api/records',{headers:{Cookie:cookie}})).json()).records;
-assert.equal(records.find(r=>r.id===id).payload.amount,12345,'persist exact cents');
+assert.equal(records.find(r=>r.id===id).payload.amount,12345,'persist exact cents'); assert.equal(records.find(r=>r.id===id).payload.time,'19:49:16','persist timestamp');
 assert.equal((await post({action:'save',id,kind:'transaction',version:0,payload})).status,409,'duplicate create');
 assert.equal((await post({action:'save',id,kind:'transaction',version:1,payload:{...payload,amount:12400}})).status,200,'update');
 assert.equal((await post({action:'save',id,kind:'transaction',version:1,payload})).status,409,'reject stale device update');
@@ -33,3 +33,4 @@ assert.equal(parseEntry('food -100'),null);
 assert.equal(parseEntry('food 100.123'),null);
 assert.equal(parseEntry('food 10 and 20'),null);
 console.log('PASS: quick-entry grouping, paycheck names, negative amounts and ambiguous numbers.');
+

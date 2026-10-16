@@ -1,0 +1,19 @@
+import assert from 'node:assert/strict';
+import {parseTransactions,planImport} from './app/import-data.ts';
+const header='Timestamp\tDescription\tCategory\tSub-Category\tAmount\n';
+const row='10/14/2026 19:49:16\tTest internet\tBills\tInternet\t1,500.25';
+const parsed=parseTransactions(header+row);
+assert.equal(parsed[0].amount,150025);assert.equal(parsed[0].time,'19:49:16');assert.equal(parsed[0].date,'2026-10-14');
+assert.throws(()=>parseTransactions(header+row.replace('19:49:16','29:49:16')));
+assert.throws(()=>parseTransactions(header+row.replace('10/14/2026','02/30/2026')));
+assert.throws(()=>parseTransactions(header+row.replace('1,500.25','1,50')));
+const plan=await planImport([parsed[0],parsed[0]],[]);
+assert.equal(plan.length,2);assert.notEqual(plan[0].id,plan[1].id);
+let existing=plan.map(r=>({id:r.id,kind:'transaction',payload:r.payload,version:1}));
+assert.equal((await planImport([parsed[0],parsed[0]],existing)).filter(r=>!r.skip).length,0);
+assert.equal((await planImport([parsed[0],parsed[0]],existing.slice(0,1))).filter(r=>!r.skip).length,1);
+const manual={id:'manual',kind:'transaction',payload:{...parsed[0],time:undefined},version:1};
+assert.equal((await planImport([parsed[0]],[manual]))[0].skip,true);
+assert.equal((await planImport([parsed[0]],[{...existing[0],payload:{...parsed[0],note:'edited'}}]))[0].skip,true);
+console.log('PASS: spreadsheet parsing, exact cents/timestamps, category validation, invalid dates/times, repeat imports, partial retries, multiplicity, manual matches and edited imports.');
+
