@@ -1,7 +1,7 @@
 import { z } from 'zod';
 export const categories={
 Income:['Paycheck 1','Paycheck 2'],
-Expenses:['Food','Drinks','Snacks','Drinking Water','Internet','Groceries','Wet/Dry Market','Transportation','Load','Laundry','Debt Payment','Subscription'],
+Expenses:['Food','Drinks','Snacks','Drinking Water','Internet','Groceries','Wet/Dry Market','Transportation','Load','Laundry','Debt Payment','Subscription','Others'],
 Bills:['House Rent','Electricity Bill','Water Bill','Loan','Internet'],
 Savings:['Wedding','Extra Savings','Emergency Fund']
 } as const;
