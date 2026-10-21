@@ -1,6 +1,7 @@
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import { transactionSchema,templateSchema,budgetSchema } from '../../budget-data';
+import {billSchema,billPlanSchema} from '../../bills-data';
 export const dynamic='force-dynamic';
 const json=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export async function GET(){
@@ -19,9 +20,11 @@ export async function POST(request:Request){
  return result.meta.changes?json({ok:true}):json({error:'This record changed on another device. Refresh and try again.'},409);
  }
  if(b.action!=='save')return json({error:'Invalid action.'},400);
- const schema=b.kind==='transaction'?transactionSchema:b.kind==='template'?templateSchema:b.kind==='budget'?budgetSchema:null;
+ const schema=b.kind==='transaction'?transactionSchema:b.kind==='template'?templateSchema:b.kind==='budget'?budgetSchema:b.kind==='bill'?billSchema:b.kind==='billplan'?billPlanSchema:null;
  const parsed=schema?.safeParse(b.payload);if(!parsed?.success)return json({error:'Check the amount, category, and date.'},400);
  if(b.kind==='budget'&&b.id!=='budget-'+(parsed.data as any).month)return json({error:'Invalid budget month.'},400);
+ if(b.kind==='billplan'&&b.id!=='billplan-'+(parsed.data as any).month)return json({error:'Invalid plan month.'},400);
+ if(b.kind==='bill'&&(parsed.data as any).transactionId){const linked=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,(parsed.data as any).transactionId,'transaction').first();if(!linked||JSON.parse(linked.payload as string).group!=='Bills')return json({error:'Choose an existing Bills transaction from your account.'},400);}
  const payload=JSON.stringify(parsed.data);
  const result=b.version===0
  ?await env.DB!.prepare('INSERT INTO records (user_id,id,kind,payload,version) VALUES (?,?,?,?,1) ON CONFLICT(user_id,id) DO NOTHING').bind(user.userId,b.id,b.kind,payload).run()

@@ -14,7 +14,7 @@ export const templateSchema=z.object({amount:z.number().int().positive().max(100
 export const budgetSchema=z.object({amount:z.number().int().min(0).max(100000000000),month:z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/)});
 export type Txn=z.infer<typeof transactionSchema>;
 export type Template=z.infer<typeof templateSchema>;
-export type RecordRow={id:string;kind:'transaction'|'template'|'budget';payload:any;version:number};
+export type RecordRow={id:string;kind:'transaction'|'template'|'budget'|'bill'|'billplan';payload:any;version:number};
 export const money=(n:number)=>new Intl.NumberFormat('en-PH',{style:'currency',currency:'PHP',minimumFractionDigits:2}).format(n/100);
 export function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
 export function totals(rows:Txn[]){return rows.reduce((a,t)=>{a[t.group]+=t.amount;return a;},{Income:0,Expenses:0,Bills:0,Savings:0});}
