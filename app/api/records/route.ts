@@ -26,6 +26,7 @@ export async function POST(request:Request){
  if(b.kind==='billplan'&&b.id!=='billplan-'+(parsed.data as any).month)return json({error:'Invalid plan month.'},400);
  if(b.kind==='bill'&&(parsed.data as any).transactionId){const linked=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,(parsed.data as any).transactionId,'transaction').first();if(!linked||JSON.parse(linked.payload as string).group!=='Bills')return json({error:'Choose an existing Bills transaction from your account.'},400);}
  const payload=JSON.stringify(parsed.data);
+ if(b.kind==='bill'&&b.version>0){const current=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,b.id,'bill').first();if(current){const old=JSON.parse(current.payload as string),next=parsed.data as any;if(old.installments&&(JSON.stringify(old.installments)!==JSON.stringify(next.installments)||old.name!==next.name||old.month!==next.month||old.category!==next.category))return json({error:'The payment schedule is locked. Update payment status to change the remaining count.'},400);}}
  const result=b.version===0
  ?await env.DB!.prepare('INSERT INTO records (user_id,id,kind,payload,version) VALUES (?,?,?,?,1) ON CONFLICT(user_id,id) DO NOTHING').bind(user.userId,b.id,b.kind,payload).run()
  :await env.DB!.prepare('UPDATE records SET payload=?,version=version+1 WHERE user_id=? AND id=? AND kind=? AND version=?').bind(payload,user.userId,b.id,b.kind,b.version).run();

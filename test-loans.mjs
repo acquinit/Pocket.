@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {loanProgress,billSchema} from './app/bills-data.ts';
+const base={month:'2026-10',name:'Example loan',category:'Loan',amount:10000,dueDate:null,paid:false,datePaid:null,variable:false,note:'',transactionId:null,installments:{payments:6,startMonth:'2026-10',finalDate:'2027-03-28'}};
+const row=(payload,id='loan')=>({id,kind:'bill',payload,version:1});
+assert.equal(loanProgress(base,[row(base)]).remaining,6);
+assert.equal(loanProgress(base,[row({...base,paid:true})]).remaining,5);
+assert.equal(loanProgress(base,[row({...base,paid:true}),row({...base,paid:true},'duplicate')]).remaining,5);
+assert.equal(loanProgress(base,[row({...base,paid:true}),row({...base,month:'2026-11',paid:true,installments:undefined},'next')]).remaining,4);
+assert.equal(loanProgress(base,[row(base),row({...base,month:'2026-09',paid:true},'old')]).remaining,6);
+assert.equal(loanProgress(base,[row(base)]).remaining,6,'unmark restores count');
+assert.equal(loanProgress(base,[row({...base,paid:true,transactionId:'pay'}),row({...base,month:'2026-11',paid:true,transactionId:'pay'},'next')]).remaining,5,'same payment only counts once');
+assert.equal(billSchema.safeParse({...base,installments:{...base.installments,payments:-1}}).success,false);
+console.log('PASS: loan counters, paid/unpaid reversal, duplicate months and linked payments, date boundaries and validation.');
