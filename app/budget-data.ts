@@ -32,3 +32,8 @@ export function parseEntry(text:string){
 }
 
 
+
+export function runningBalance(transactions:Txn[],asOf=today()){
+ const recorded=transactions.filter(t=>t.date<=asOf), sums=totals(recorded);
+ return {...sums,spent:sums.Expenses+sums.Bills,available:sums.Income-sums.Expenses-sums.Bills-sums.Savings};
+}

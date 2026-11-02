@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {runningBalance} from './app/budget-data.ts';
+const tx=(amount,group,date,status)=>({amount,group,date,status,category:group==='Income'?'Paycheck 1':status==='pending'?'Uncategorized':'Food',note:''});
+const rows=[tx(1500000,'Income','2026-10-29'),tx(300000,'Expenses','2026-10-31'),tx(8500,'Expenses','2026-11-02','pending'),tx(100000,'Savings','2026-11-01'),tx(150000,'Bills','2026-11-01'),tx(2000000,'Income','2026-11-15')];
+assert.equal(runningBalance(rows,'2026-10-31').available,1200000);
+assert.equal(runningBalance(rows,'2026-11-02').available,941500);
+assert.equal(runningBalance(rows,'2026-11-02').Income,1500000,'exclude future paycheck');
+assert.equal(runningBalance(rows.map(t=>t.status==='pending'?{...t,status:'complete',category:'Food'}:t),'2026-11-02').available,941500,'completion does not double count');
+assert.equal(runningBalance([],'2026-11-02').available,0);
+assert.equal(runningBalance([tx(10000,'Expenses','2026-11-01')],'2026-11-02').available,-10000,'preserve negative balances');
+assert.equal(runningBalance(rows.filter(t=>t.group!=='Bills'),'2026-11-02').available,1091500,'deleted bill expense restores balance');
+console.log('PASS: October carryover, November spending, pending entries, savings, bills, future exclusion, completion, deletion and negative balances.');
