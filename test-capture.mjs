@@ -1,0 +1,17 @@
+import assert from 'node:assert/strict';
+import {calculateAmount,capturePayload} from './app/quick-math.ts';
+import {transactionSchema,totals} from './app/budget-data.ts';
+for(const [expression,expected] of [['50+35',8500],['0.1+0.2',30],['10-2×3',400],['100÷4',2500],['1/3',33],['3.50+6.25',975]])assert.equal(calculateAmount(expression),expected,expression);
+for(const expression of ['','1/0','2-5','0','5+','5..2','1.234','alert(1)','99999999999999'])assert.equal(calculateAmount(expression),null,expression);
+const payload=capturePayload(8500,new Date('2026-11-02T16:01:02Z'));
+assert.equal(payload.date,'2026-11-03');assert.equal(payload.time,'00:01:02');assert.ok(transactionSchema.safeParse(payload).success);
+assert.equal(totals([payload]).Expenses,8500);
+assert.equal(transactionSchema.safeParse({...payload,status:'complete'}).success,false);
+const base='http://127.0.0.1:5173';const login=await fetch(base+'/signin-with-chatgpt?return_to=/',{redirect:'manual'});const cookie=login.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');
+const headers={'Content-Type':'application/json',Origin:base,Cookie:cookie};const post=b=>fetch(base+'/api/records',{method:'POST',headers,body:JSON.stringify(b)});const id=crypto.randomUUID();const body={action:'save',id,kind:'transaction',version:0,payload};
+assert.equal((await post(body)).status,200);assert.equal((await post(body)).status,200,'same quick capture retry is idempotent');
+let records=(await(await fetch(base+'/api/records',{headers:{Cookie:cookie}})).json()).records;assert.equal(records.filter(r=>r.id===id).length,1);
+const final={...payload,status:'complete',note:'Lunch',category:'Food'};assert.equal((await post({...body,version:1,payload:final})).status,200);
+records=(await(await fetch(base+'/api/records',{headers:{Cookie:cookie}})).json()).records;const row=records.find(r=>r.id===id);assert.equal(row.payload.time,payload.time);assert.equal(row.payload.amount,8500);assert.equal(row.payload.status,'complete');assert.equal(totals([row.payload]).Expenses,8500);
+assert.equal((await post({...body,version:1,payload:final})).status,409);assert.equal((await post({action:'delete',id,version:2})).status,200);
+console.log('PASS calculator, Manila timestamp, immediate totals, API persistence, idempotent retry, same-record completion and stale-update protection');
