@@ -1,3 +1,4 @@
+import {accountSchema,defaultAccounts,accountRecordId} from '../../accounts-data';
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import { transactionSchema,templateSchema,budgetSchema } from '../../budget-data';
@@ -20,15 +21,24 @@ export async function POST(request:Request){
  return result.meta.changes?json({ok:true}):json({error:'This record changed on another device. Refresh and try again.'},409);
  }
  if(b.action!=='save')return json({error:'Invalid action.'},400);
- const schema=b.kind==='transaction'?transactionSchema:b.kind==='template'?templateSchema:b.kind==='budget'?budgetSchema:b.kind==='bill'?billSchema:b.kind==='billplan'?billPlanSchema:null;
+ const schema=b.kind==='transaction'?transactionSchema:b.kind==='template'?templateSchema:b.kind==='budget'?budgetSchema:b.kind==='bill'?billSchema:b.kind==='billplan'?billPlanSchema:b.kind==='account'?accountSchema:null;
  const parsed=schema?.safeParse(b.payload);if(!parsed?.success)return json({error:'Check the amount, category, and date.'},400);
  if(b.kind==='budget'&&b.id!=='budget-'+(parsed.data as any).month)return json({error:'Invalid budget month.'},400);
  if(b.kind==='billplan'&&b.id!=='billplan-'+(parsed.data as any).month)return json({error:'Invalid plan month.'},400);
  if(b.kind==='bill'&&(parsed.data as any).transactionId){const linked=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,(parsed.data as any).transactionId,'transaction').first();if(!linked||JSON.parse(linked.payload as string).group!=='Bills')return json({error:'Choose an existing Bills transaction from your account.'},400);}
+ if(b.kind==='account'){
+ const name=(parsed.data as any).name;
+ if(defaultAccounts.some(a=>a.toLowerCase()===name.toLowerCase())||b.id!==await accountRecordId(name))return json({error:'Choose a unique account name.'},400);
+ }
+ const account=(parsed.data as any).account;
+ if(account&&!defaultAccounts.includes(account)){
+ const custom=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,await accountRecordId(account),'account').first();
+ if(!custom||JSON.parse(custom.payload as string).name!==account)return json({error:'Choose an account saved in your account list.'},400);
+ }
  const payload=JSON.stringify(parsed.data);
  // A retry after a lost response must not create another quick expense.
- if(b.kind==='transaction'&&b.version===0&&(parsed.data as any).status==='pending'){
- const existing=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,b.id,'transaction').first();
+ if(b.version===0&&(b.kind==='account'||(b.kind==='transaction'&&(parsed.data as any).status==='pending'))){
+ const existing=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,b.id,b.kind).first();
  if(existing&&existing.payload===payload)return json({ok:true});
  }
  if(b.kind==='bill'&&b.version>0){const current=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,b.id,'bill').first();if(current){const old=JSON.parse(current.payload as string),next=parsed.data as any;if(old.installments&&(JSON.stringify(old.installments)!==JSON.stringify(next.installments)||old.name!==next.name||old.month!==next.month||old.category!==next.category))return json({error:'The payment schedule is locked. Update payment status to change the remaining count.'},400);}}
