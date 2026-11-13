@@ -30,14 +30,16 @@ export async function POST(request:Request){
  const name=(parsed.data as any).name;
  if(defaultAccounts.some(a=>a.toLowerCase()===name.toLowerCase())||b.id!==await accountRecordId(name))return json({error:'Choose a unique account name.'},400);
  }
- const account=(parsed.data as any).account;
- if(account&&!defaultAccounts.includes(account)){
+ const data=parsed.data as any;
+ for(const account of [data.account,data.fromAccount,data.toAccount].filter(Boolean)){
+ if(!defaultAccounts.includes(account)){
  const custom=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,await accountRecordId(account),'account').first();
  if(!custom||JSON.parse(custom.payload as string).name!==account)return json({error:'Choose an account saved in your account list.'},400);
  }
+ }
  const payload=JSON.stringify(parsed.data);
  // A retry after a lost response must not create another quick expense.
- if(b.version===0&&(b.kind==='account'||(b.kind==='transaction'&&(parsed.data as any).status==='pending'))){
+ if(b.version===0&&(b.kind==='account'||(b.kind==='transaction'&&((parsed.data as any).status==='pending'||(parsed.data as any).group==='Transfer')))){
  const existing=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,b.id,b.kind).first();
  if(existing&&existing.payload===payload)return json({ok:true});
  }
