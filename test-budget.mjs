@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {cents,validDate,totals,transactionSchema} from './app/budget-data.ts';
 assert.equal(cents('0.29'),29);assert.equal(cents('123.45'),12345);for(const v of ['-1','0','1.234','Infinity','abc','1,50'])assert.equal(cents(v),null);
 assert.equal(validDate('2026-02-30'),false);assert.equal(validDate('2028-02-29'),true);
-assert.deepEqual(totals([{group:'Income',amount:10000},{group:'Expenses',amount:1000},{group:'Bills',amount:2000},{group:'Savings',amount:3000}]),{Income:10000,Expenses:1000,Bills:2000,Savings:3000});
+assert.deepEqual(totals([{group:'Income',amount:10000},{group:'Expenses',amount:1000},{group:'Bills',amount:2000},{group:'Savings',amount:3000}]),{Income:10000,Expenses:1000,Bills:2000,Savings:3000,Transfer:0});
 assert.equal(transactionSchema.safeParse({amount:100,group:'Income',category:'Food',date:'2026-10-16',note:''}).success,false);
 const base='http://127.0.0.1:5173';
 const login=await fetch(base+'/signin-with-chatgpt?return_to=/',{redirect:'manual'});
