@@ -39,7 +39,7 @@ export async function POST(request:Request){
  }
  const payload=JSON.stringify(parsed.data);
  // A retry after a lost response must not create another quick expense.
- if(b.version===0&&(b.kind==='account'||(b.kind==='transaction'&&((parsed.data as any).status==='pending'||(parsed.data as any).group==='Transfer')))){
+ if(b.version===0&&(b.kind==='account'||(b.kind==='transaction'&&((parsed.data as any).templateId||(parsed.data as any).status==='pending'||(parsed.data as any).group==='Transfer')))){
  const existing=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,b.id,b.kind).first();
  if(existing&&existing.payload===payload)return json({ok:true});
  }

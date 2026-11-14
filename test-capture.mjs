@@ -15,3 +15,9 @@ const final={...payload,status:'complete',note:'Lunch',category:'Food'};assert.e
 records=(await(await fetch(base+'/api/records',{headers:{Cookie:cookie}})).json()).records;const row=records.find(r=>r.id===id);assert.equal(row.payload.time,payload.time);assert.equal(row.payload.amount,8500);assert.equal(row.payload.status,'complete');assert.equal(totals([row.payload]).Expenses,8500);
 assert.equal((await post({...body,version:1,payload:final})).status,409);assert.equal((await post({action:'delete',id,version:2})).status,200);
 console.log('PASS calculator, Manila timestamp, immediate totals, API persistence, idempotent retry, same-record completion and stale-update protection');
+const use={...body,id:crypto.randomUUID(),payload:{...final,templateId:'test-shortcut',templateUsedOn:payload.date}};
+assert.equal((await post(use)).status,200);assert.equal((await post(use)).status,200);
+const hits=(await(await fetch(base+'/api/records',{headers:{Cookie:cookie}})).json()).records.filter(r=>r.id===use.id);
+assert.equal(hits.length,1);assert.equal(hits[0].payload.templateId,'test-shortcut');assert.equal(hits[0].payload.templateUsedOn,payload.date);
+assert.equal((await post({action:'delete',id:use.id,version:1})).status,200);
+console.log('PASS template attribution, recorded use date, and idempotent one-tap save.');

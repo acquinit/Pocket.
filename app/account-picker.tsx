@@ -3,7 +3,7 @@ import {useState,useId} from 'react';
 import {Wallet,Plus,Check} from 'lucide-react';
 import {normalizeAccount} from './accounts-data';
 const logos:Record<string,string>={'MariBank':'maribank.png','GoTyme':'gotyme.svg','Maya':'maya.svg','Atome':'atome.ico','DiskarTech':'diskartech.svg'};
-export function AccountMark({name}:{name:string}){const [failed,setFailed]=useState(false);return <span className="account-mark" aria-hidden="true">{logos[name]&&!failed?<img src={'/accounts/'+logos[name]} alt="" width="54" height="30" onError={()=>setFailed(true)}/>:name==='Cash Out'?<Wallet size={22}/>:<span>{name.split(/\s/).map(w=>w[0]).slice(0,2).join('').toUpperCase()}</span>}</span>}
+export function AccountMark({name}:{name:string}){const [failed,setFailed]=useState(false);return <span className={'account-mark '+(name==='Security Bank'?'security-mark':'')} aria-hidden="true">{logos[name]&&!failed?<img src={'/accounts/'+logos[name]} alt="" width="54" height="30" onError={()=>setFailed(true)}/>:name==='Cash Out'?<Wallet size={22}/>:<span>{name.split(/\s/).map(w=>w[0]).slice(0,2).join('').toUpperCase()}</span>}</span>}
 export default function AccountPicker({accounts,value,onChange,onCreate,busy,group,label="Account",required=false}:{accounts:string[];value:string;onChange:(name:string)=>void;onCreate:(name:string)=>Promise<boolean>;busy:boolean;group:string;label?:string;required?:boolean}){
  const fieldId=useId();
  const [adding,setAdding]=useState(false),[name,setName]=useState(''),[error,setError]=useState('');

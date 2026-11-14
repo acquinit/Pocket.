@@ -1,5 +1,26 @@
 import {z} from 'zod';
 import {validDate,today,RecordRow} from './budget-data';
+/** Resolve links for display only. Never create a bill or mutate a payment. */
+export function reconcileBills(rows:RecordRow[],asOf=today()){
+ const plans=rows.filter(r=>r.kind==='bill'),reserved=new Set(plans.map(r=>r.payload.transactionId).filter(Boolean));
+ const payments=rows.filter(r=>r.kind==='transaction'&&r.payload.group==='Bills'&&r.payload.date<=asOf&&!reserved.has(r.id));
+ const choices=new Map<string,RecordRow[]>(),claims=new Map<string,number>();
+ for(const b of plans){
+  const p=b.payload;if(p.transactionId)continue;
+  const providers=plans.filter(r=>r.payload.month===p.month&&r.payload.category===p.category);
+  const pool=payments.filter(t=>{
+   if(!t.payload.date.startsWith(p.month)||t.payload.category!==p.category||(p.amount!==null&&p.amount!==t.payload.amount))return false;
+   const note=(t.payload.note||'').toLowerCase(),named=providers.filter(r=>note.includes(r.payload.name.toLowerCase()));
+   return !named.length||named.some(r=>r.id===b.id);
+  });
+  const named=pool.filter(t=>(t.payload.note||'').toLowerCase().includes(p.name.toLowerCase()));
+  const candidates=named.length?named:pool;
+  choices.set(b.id,candidates);for(const t of candidates)claims.set(t.id,(claims.get(t.id)||0)+1);
+ }
+ const auto=new Set<string>();
+ const linked=rows.map(r=>{const matches=choices.get(r.id);if(matches?.length!==1||claims.get(matches[0].id)!==1)return r;const t=matches[0];reserved.add(t.id);auto.add(r.id);return {...r,payload:{...r.payload,transactionId:t.id}}});
+ return {linked,auto,unmatched:payments.filter(t=>!reserved.has(t.id))};
+}
 const month=z.string().regex(/^\d{4}-(0[1-9]|1[0-2])$/);
 const amount=z.number().int().min(0).max(100000000000);
 const date=z.string().refine(validDate).nullable();

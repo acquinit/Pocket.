@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {billSchema,billPlanSchema,billState} from './app/bills-data.ts';
+import {billSchema,billPlanSchema,billState,reconcileBills} from './app/bills-data.ts';
 const b={month:'2026-10',name:'Electricity',category:'Electricity Bill',amount:123456,dueDate:'2026-10-28',paid:false,datePaid:null,variable:true,note:'',transactionId:null};
 assert.equal(billSchema.safeParse(b).success,true);
 assert.equal(billSchema.safeParse({...b,dueDate:'2026-02-30'}).success,false);
@@ -18,3 +18,16 @@ assert.equal(billState({...b,transactionId:'deleted'},rows).missingPayment,true)
 assert.equal(billState({...b,transactionId:'payment'},[{...rows[0],payload:{...rows[0].payload,group:'Income'}}]).paid,false);
 assert.equal(billPlanSchema.safeParse({month:'2026-13',emergency:0,wedding:0,savings:0}).success,false);
 console.log('PASS: bill dates, currency precision, unknown amounts, paid/overdue states, payment links and monthly targets.');
+const plan={kind:'bill',id:'plan',payload:{...b,category:'Loan',name:'First loan'}};
+const other={...plan,id:'other',payload:{...plan.payload,name:'Second loan'}};
+const tx={...rows[0],payload:{...rows[0].payload,category:'Loan',note:''}};
+const match=(...items)=>reconcileBills(items,'2026-10-31');
+assert.equal(match(plan,tx).linked[0].payload.transactionId,'payment');
+assert.equal(plan.payload.transactionId,null);
+assert.equal(match(plan,other,tx).auto.size,0);
+assert.equal(match(plan,other,{...tx,payload:{...tx.payload,note:'Second loan installment'}}).linked[1].payload.transactionId,'payment');
+assert.equal(match(plan,tx,{...tx,id:'duplicate'}).auto.size,0);
+assert.equal(match(plan,{...tx,payload:{...tx.payload,amount:100}}).unmatched.length,1);
+assert.equal(match(plan,{...tx,payload:{...tx.payload,date:'2026-11-02'}}).auto.size,0);
+assert.equal(match(plan,{...other,payload:{...other.payload,transactionId:tx.id}},tx).auto.size,0);
+console.log('PASS: automatic matching, ambiguous loans, manual priority, dates, amount mismatch, and no record mutation.');
