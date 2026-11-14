@@ -1,8 +1,16 @@
 import assert from 'node:assert/strict';
-import {accountRecordId,defaultAccounts,accountSchema} from './app/accounts-data.ts';
+import {accountRecordId,defaultAccounts,accountSchema,renameWalletFields} from './app/accounts-data.ts';
 import {transactionSchema} from './app/budget-data.ts';
 assert.equal(await accountRecordId(' My Wallet '),await accountRecordId('my  wallet'));
 assert.equal(accountSchema.safeParse({name:'   '}).success,false);
+for(const kind of ['transaction','template']){
+ for(const field of ['account','fromAccount','toAccount']){
+  const old={amount:100,date:'2026-11-13',note:'Cash Out', [field]:'Cash Out'};
+  const updated=renameWalletFields(kind,old);
+  assert.deepEqual(updated,{...old,[field]:'My Wallet'});
+  assert.equal(renameWalletFields(kind,updated),updated);
+ }
+}
 const base='http://127.0.0.1:5173',login=await fetch(base+'/signin-with-chatgpt?return_to=/',{redirect:'manual'}),cookie=login.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');
 const headers={'Content-Type':'application/json',Origin:base,Cookie:cookie},post=b=>fetch(base+'/api/records',{method:'POST',headers,body:JSON.stringify(b)});
 const name='Test wallet '+Date.now(),id=await accountRecordId(name),body={action:'save',id,kind:'account',version:0,payload:{name}};

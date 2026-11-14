@@ -1,4 +1,4 @@
-import {accountSchema,defaultAccounts,accountRecordId} from '../../accounts-data';
+import {accountSchema,defaultAccounts,accountRecordId,previousWalletName,renameWalletFields} from '../../accounts-data';
 import { env } from 'cloudflare:workers';
 import { getChatGPTUser } from '../../chatgpt-auth';
 import { transactionSchema,templateSchema,budgetSchema } from '../../budget-data';
@@ -7,8 +7,21 @@ export const dynamic='force-dynamic';
 const json=(body:unknown,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 export async function GET(){
  const user=await getChatGPTUser();if(!user)return json({error:'Please sign in again.'},401);
- const result=await env.DB!.prepare('SELECT id,kind,payload,version FROM records WHERE user_id=?').bind(user.userId).all();
- return json({records:result.results.map((r:any)=>({...r,payload:JSON.parse(r.payload)}))});
+ const read=async()=>{
+  const result=await env.DB!.prepare('SELECT id,kind,payload,version FROM records WHERE user_id=?').bind(user.userId).all();
+  return result.results.map((r:any)=>({...r,payload:JSON.parse(r.payload)}));
+ };
+ const records=await read();
+ const updates=[];
+ for(const record of records){
+  const payload=renameWalletFields(record.kind,record.payload);
+  if(payload===record.payload)continue;
+  updates.push(env.DB!.prepare('UPDATE records SET payload=?,version=version+1 WHERE user_id=? AND id=? AND version=?')
+   .bind(JSON.stringify(payload),user.userId,record.id,record.version));
+ }
+ if(!updates.length)return json({records});
+ for(let start=0;start<updates.length;start+=50)await env.DB!.batch(updates.slice(start,start+50));
+ return json({records:await read()});
 }
 export async function POST(request:Request){
  const user=await getChatGPTUser();if(!user)return json({error:'Please sign in again.'},401);
@@ -22,13 +35,13 @@ export async function POST(request:Request){
  }
  if(b.action!=='save')return json({error:'Invalid action.'},400);
  const schema=b.kind==='transaction'?transactionSchema:b.kind==='template'?templateSchema:b.kind==='budget'?budgetSchema:b.kind==='bill'?billSchema:b.kind==='billplan'?billPlanSchema:b.kind==='account'?accountSchema:null;
- const parsed=schema?.safeParse(b.payload);if(!parsed?.success)return json({error:'Check the amount, category, and date.'},400);
+ const parsed=schema?.safeParse(renameWalletFields(b.kind,b.payload));if(!parsed?.success)return json({error:'Check the amount, category, and date.'},400);
  if(b.kind==='budget'&&b.id!=='budget-'+(parsed.data as any).month)return json({error:'Invalid budget month.'},400);
  if(b.kind==='billplan'&&b.id!=='billplan-'+(parsed.data as any).month)return json({error:'Invalid plan month.'},400);
  if(b.kind==='bill'&&(parsed.data as any).transactionId){const linked=await env.DB!.prepare('SELECT payload FROM records WHERE user_id=? AND id=? AND kind=?').bind(user.userId,(parsed.data as any).transactionId,'transaction').first();if(!linked||JSON.parse(linked.payload as string).group!=='Bills')return json({error:'Choose an existing Bills transaction from your account.'},400);}
  if(b.kind==='account'){
  const name=(parsed.data as any).name;
- if(defaultAccounts.some(a=>a.toLowerCase()===name.toLowerCase())||b.id!==await accountRecordId(name))return json({error:'Choose a unique account name.'},400);
+ if([...defaultAccounts,previousWalletName].some(a=>a.toLowerCase()===name.toLowerCase())||b.id!==await accountRecordId(name))return json({error:'Choose a unique account name.'},400);
  }
  const data=parsed.data as any;
  for(const account of [data.account,data.fromAccount,data.toAccount].filter(Boolean)){
