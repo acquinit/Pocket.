@@ -8,8 +8,12 @@ export function calculateAmount(input:string):number|null{
  const cents=Math.round((sum+term+Number.EPSILON)*100);
  return Number.isSafeInteger(cents)&&cents>0&&cents<=100000000000?cents:null;
 }
-export function capturePayload(amount:number,now=new Date()){
+export function manilaTimestamp(now=new Date()){
  const parts=new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',second:'2-digit',hourCycle:'h23'}).formatToParts(now);
  const get=(type:string)=>parts.find(p=>p.type===type)!.value;
- return {amount,group:'Expenses' as const,category:'Uncategorized',note:'',status:'pending' as const,date:`${get('year')}-${get('month')}-${get('day')}`,time:`${get('hour')}:${get('minute')}:${get('second')}`};
+ return {date:`${get('year')}-${get('month')}-${get('day')}`,time:`${get('hour')}:${get('minute')}:${get('second')}`};
+}
+
+export function capturePayload(amount:number,now=new Date()){
+ return {amount,group:'Expenses' as const,category:'Uncategorized',note:'',status:'pending' as const,...manilaTimestamp(now)};
 }
