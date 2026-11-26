@@ -22,7 +22,7 @@ const pocket=parseTransactions(pocketHeader+pocketRows);
 assert.equal(pocket.length,4);
 assert.equal(pocket[3].time===undefined||pocket[3].time==='',true);
 assert.equal(pocket[0].status,'complete');assert.equal(pocket[0].account,'My Wallet');assert.equal(pocket[0].amount,20000);
-assert.equal(pocket[1].status,'pending');assert.equal(pocket[1].category,'Uncategorized');assert.equal(pocket[1].amount,6500);
+assert.equal(pocket[1].status,'pending');assert.equal(pocket[1].category,'Uncategorized');assert.equal(pocket[1].amount,6500);assert.equal(pocket[1].account===undefined||pocket[1].account==='',true);
 assert.equal(pocket[2].status,'complete');assert.equal(pocket[2].fromAccount,'MariBank');assert.equal(pocket[2].toAccount,'My Wallet');assert.equal(pocket[2].amount,180000);
 assert.throws(()=>parseTransactions('Name,Amount\nTest,100'));
 assert.throws(()=>parseTransactions(pocketHeader+'"2026-11-23","22:01:00","Expenses","Others","Test","200.00","Maybe","My Wallet","",""'));

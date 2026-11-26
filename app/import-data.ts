@@ -42,6 +42,9 @@ function dataRows(rows:ParsedRow[]){
   if(!data.length||data.length>500)throw Error('Add between 1 and 500 transactions.');
   return data;
 }
+function cleanAccount(value:string){
+  return value.trim().toLowerCase()==='unassigned'?'':value.trim();
+}
 function amountToCents(raw:string,line:number){
   const text=raw.trim().replace(/^₱\s*/,'');
   if(text.includes(',')&&!/^\d{1,3}(,\d{3})+(\.\d{1,2})?$/.test(text))throw Error('Row '+line+': invalid amount.');
@@ -69,7 +72,8 @@ function parseSheetRows(rows:ParsedRow[],delimiter:string):Txn[]{
 function parsePocketRows(rows:ParsedRow[]):Txn[]{
   return dataRows(rows).map(({cells,line})=>{
    if(cells.length!==10)throw Error('Row '+line+': expected ten columns.');
-   const [date,time,group,subcategory,description,raw,statusText,account,fromAccount,toAccount]=cells.map(x=>x.trim());
+   const [date,time,group,subcategory,description,raw,statusText,accountRaw,fromRaw,toRaw]=cells.map(x=>x.trim());
+   const account=cleanAccount(accountRaw),fromAccount=cleanAccount(fromRaw),toAccount=cleanAccount(toRaw);
    if(!validDate(date))throw Error('Row '+line+': use YYYY-MM-DD for the date.');
    if(time&&!/^([01]\d|2[0-3]):[0-5]\d:[0-5]\d$/.test(time))throw Error('Row '+line+': use HH:mm:ss for the time.');
    const statusKey=statusText.toLowerCase();
