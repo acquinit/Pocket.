@@ -27,7 +27,7 @@ export default function ImportTransactions({finish}:{finish:(message:string)=>vo
   }catch(e:any){setError(e.message+' '+added+' saved during this attempt. Retry safely; existing records will be skipped.');}finally{setBusy(false);setProgress('')}
   }
   const values=plan?totals(plan.map(x=>x.payload)):{Income:0,Expenses:0,Bills:0,Savings:0};
-  return <div className="entry-form"><p className="muted">Choose a CSV file exported from your spreadsheet, or paste the five columns below. Include the header row. Dates and times are interpreted in Philippine time. Matching records are skipped; existing entries are never overwritten.</p>
+  return <div className="entry-form"><p className="muted">Choose a Pocket CSV export or a Google Sheets CSV, or paste the five columns below. Include the header row. Dates and times are interpreted in Philippine time. Matching records are skipped; existing entries are never overwritten.</p>
   <label className="import-label">CSV file<input aria-label="CSV file" type="file" accept=".csv,.tsv,text/csv,text/tab-separated-values" disabled={busy} onChange={async e=>{const file=e.target.files?.[0];e.target.value='';await readFile(file)}}/></label>
   {fileName&&<p className="muted">Selected: {fileName}</p>}
   <label className="import-label">Spreadsheet transactions<textarea aria-label="Spreadsheet transactions" rows={7} value={text} disabled={busy} onChange={e=>{setText(e.target.value);setFileName('');setPlan(null)}} placeholder="Timestamp → Description → Category → Sub-Category → Amount"/></label>
