@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { auth } from './test-auth.mjs';
 import {transactionSchema,templateSchema,accountBalances,runningBalance,totals} from './app/budget-data.ts';
 const income={amount:1000000,group:'Income',category:'Paycheck 1',date:'2026-10-30',note:'Test',account:'Security Bank'};
 const transfer={amount:250000,group:'Transfer',category:'Account transfer',date:'2026-11-01',note:'Move savings',fromAccount:'Security Bank',toAccount:'DiskarTech'};
@@ -17,17 +18,17 @@ assert.equal(balances.find(a=>a.name==='').balance,-10000);
 assert.equal(balances.reduce((n,a)=>n+a.balance,0),runningBalance(list,'2026-11-13').available);
 assert.equal(runningBalance([income,transfer],'2026-11-13').available,1000000);
 assert.equal(totals([transfer]).Income,0);assert.equal(totals([transfer]).Expenses,0);
-const base='http://127.0.0.1:5173',login=await fetch(base+'/signin-with-chatgpt?return_to=/',{redirect:'manual'}),cookie=login.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');
-const headers={'Content-Type':'application/json',Origin:base,Cookie:cookie},post=b=>fetch(base+'/api/records',{method:'POST',headers,body:JSON.stringify(b)});
+const base='http://localhost:5173'
+const headers={'Content-Type':'application/json',Origin:base,...auth},post=b=>fetch(base+'/api/records',{method:'POST',headers,body:JSON.stringify(b)});
 const id=crypto.randomUUID(),body={action:'save',id,kind:'transaction',version:0,payload:transfer};
 assert.equal((await post(body)).status,200);assert.equal((await post(body)).status,200,'transfer retry is idempotent');
 for(const bad of [{toAccount:'Security Bank'},{toAccount:'Someone else account'},{fromAccount:'Not my account'}])assert.equal((await post({...body,version:1,payload:{...transfer,...bad}})).status,400);
 const updated={...transfer,amount:150000,toAccount:'Maya'};
 assert.equal((await post({...body,version:1,payload:updated})).status,200);
 assert.equal((await post({...body,version:1,payload:updated})).status,409,'stale edit rejected');
-let rows=(await(await fetch(base+'/api/records',{headers:{Cookie:cookie}})).json()).records;
+let rows=(await(await fetch(base+'/api/records',{headers:{...auth}})).json()).records;
 assert.deepEqual(rows.find(r=>r.id===id).payload,updated);
 assert.equal(rows.filter(r=>r.id===id).length,1,'one atomic record contains both sides');
 assert.equal((await post({action:'delete',id,version:2})).status,200);
-rows=(await(await fetch(base+'/api/records',{headers:{Cookie:cookie}})).json()).records;assert(!rows.some(r=>r.id===id));
+rows=(await(await fetch(base+'/api/records',{headers:{...auth}})).json()).records;assert(!rows.some(r=>r.id===id));
 console.log('PASS: transfer validation, conservation, savings, unassigned, carryover, future exclusion, persistence, idempotency, edit and delete.');

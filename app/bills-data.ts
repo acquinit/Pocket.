@@ -1,5 +1,5 @@
 import {z} from 'zod';
-import {validDate,today,RecordRow} from './budget-data';
+import {validDate,today,type RecordRow} from './budget-data.ts';
 /** Resolve links for display only. Never create a bill or mutate a payment. */
 export function reconcileBills(rows:RecordRow[],asOf=today()){
  const plans=rows.filter(r=>r.kind==='bill'),reserved=new Set(plans.map(r=>r.payload.transactionId).filter(Boolean));

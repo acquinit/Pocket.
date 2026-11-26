@@ -1,8 +1,7 @@
 import assert from 'node:assert/strict';
-const base='http://127.0.0.1:5173';
-const login=await fetch(base+'/signin-with-chatgpt?return_to=/',{redirect:'manual'});
-const cookie=login.headers.getSetCookie().map(v=>v.split(';')[0]).join('; ');
-const headers={'Content-Type':'application/json',Origin:base,Cookie:cookie};
+import { auth } from './test-auth.mjs';
+const base='http://localhost:5173';
+const headers={'Content-Type':'application/json',Origin:base,...auth};
 const post=b=>fetch(base+'/api/records',{method:'POST',headers,body:JSON.stringify(b)});
 const id=crypto.randomUUID(),paymentId=crypto.randomUUID();
 const payload={month:'2026-10',name:'Test utility',category:'Electricity Bill',amount:123456,dueDate:'2026-10-28',paid:false,datePaid:null,variable:true,note:'Local test only',transactionId:null};
@@ -11,7 +10,7 @@ assert.equal((await post({action:'save',kind:'bill',id,version:0,payload})).stat
 assert.equal((await post({action:'save',kind:'bill',id,version:1,payload:{...payload,transactionId:'not-owned'}})).status,400);
 assert.equal((await post({action:'save',kind:'transaction',id:paymentId,version:0,payload:{amount:123456,date:'2026-10-20',group:'Bills',category:'Electricity Bill',note:'Local test payment'}})).status,200);
 assert.equal((await post({action:'save',kind:'bill',id,version:1,payload:{...payload,transactionId:paymentId}})).status,200);
-const records=(await(await fetch(base+'/api/records',{headers:{Cookie:cookie}})).json()).records;
+const records=(await(await fetch(base+'/api/records',{headers:{...auth}})).json()).records;
 assert.equal(records.find(r=>r.id===id).payload.transactionId,paymentId);
 assert.equal(records.filter(r=>r.kind==='transaction'&&r.id===paymentId).length,1);
 assert.equal((await post({action:'save',kind:'billplan',id:'wrong-id',version:0,payload:{month:'2026-10',emergency:100,wedding:100,savings:100}})).status,400);

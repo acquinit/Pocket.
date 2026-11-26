@@ -1,4 +1,4 @@
-import {transactionSchema, cents, type Txn, type RecordRow} from './budget-data';
+import {transactionSchema, cents, type Txn, type RecordRow} from './budget-data.ts';
 export function parseTransactions(text:string):Txn[]{
  const lines=text.replace(/^\uFEFF/,'').trim().split(/\r?\n/);
  const head=lines.shift()?.split('\t').map(x=>x.trim());
