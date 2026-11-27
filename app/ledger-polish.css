@@ -13,7 +13,7 @@ body :is(.eyebrow,.sidebar-caption,.capture-note,.sidebar-bottom>a,.private-card
 @media(max-width:600px){.quick-capture,.overview-summary,.stats,.bill-summary{grid-template-columns:minmax(0,1fr)}.quick-capture{padding:16px;gap:12px}.capture-intro{padding:0}.money-card,.stat-card{padding:16px}.money-card:not(.balance) strong{margin:8px 0}.mobile-nav{padding-left:4px;padding-right:64px;gap:0}.mobile-add{right:8px;width:48px;height:48px}.mobile-nav button,.mobile-more summary{padding-inline:0}.section-toolbar{gap:8px}.transaction-name small{overflow-wrap:anywhere}.bill-note summary{min-height:44px}.settings-chip p{max-width:calc(100vw - 50px)}}
 @media(max-width:380px){.mobile-nav>button:nth-child(2){flex:1.5}.mobile-nav>button:nth-child(3){flex:1.2}.transaction .amount{margin-left:auto;justify-self:end}.money-card:not(.balance) strong{font-size:26px}}
 .app-shell.sidebar-collapsed .sidebar{width:76px;padding:24px 12px;align-items:center;overflow-x:hidden}
-.app-shell.sidebar-collapsed .brand{justify-content:center;padding-left:0}
+.app-shell.sidebar-collapsed .brand{display:none}
 .app-shell.sidebar-collapsed .brand-name,.app-shell.sidebar-collapsed .sidebar-caption,.app-shell.sidebar-collapsed .private-card,.app-shell.sidebar-collapsed .sign-out-label,.app-shell.sidebar-collapsed .sidebar nav button>span,.app-shell.sidebar-collapsed .sidebar nav button i{display:none}
 .app-shell.sidebar-collapsed .sidebar nav{width:100%;gap:6px}
 .app-shell.sidebar-collapsed .sidebar nav button{justify-content:center;padding:12px 0;min-height:44px}
@@ -21,4 +21,13 @@ body :is(.eyebrow,.sidebar-caption,.capture-note,.sidebar-bottom>a,.private-card
 .app-shell.sidebar-collapsed .sidebar-bottom>button{width:44px;min-height:44px;margin:0 auto;padding:0;display:grid;place-items:center;border-radius:12px;border:1px solid var(--border);background:var(--bg)}
 .app-shell.sidebar-collapsed .main{margin-left:76px}
 @media(max-width:850px){.app-shell .sidebar-toggle{display:none}}
+.sidebar-head{display:flex;align-items:center;justify-content:space-between;gap:6px}
+.sidebar-head .brand{font-size:28px}
+.sidebar-head .sidebar-toggle{width:40px;min-width:40px;height:40px;min-height:40px}
+.app-shell.sidebar-collapsed .sidebar-head{justify-content:center}
+.app-shell.sidebar-collapsed .sidebar-toggle{width:44px;min-width:44px;height:44px;min-height:44px}
+.overview-panels{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:24px;align-items:start}
+.overview-panels .quick-capture{margin-bottom:0;padding:20px;gap:16px}
+@media(max-width:1150px){.overview-panels{grid-template-columns:1fr}}
+@media(max-width:850px){.overview-panels{display:block}.overview-panels .recent-panel{margin-top:16px}}
 
