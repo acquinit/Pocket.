@@ -17,6 +17,15 @@ export const budgetSchema=z.object({amount:z.number().int().min(0).max(100000000
 export type Txn=z.infer<typeof transactionSchema>;
 export type Template=z.infer<typeof templateSchema>;
 export type RecordRow={id:string;kind:'transaction'|'template'|'budget'|'bill'|'billplan'|'account';payload:any;version:number};
+export const savingsTargetKey={Wedding:'wedding','Extra Savings':'savings','Emergency Fund':'emergency'} as const;
+export function savingsGoals(rows:RecordRow[],periodRows:RecordRow[],month:string){
+ const plan=rows.find(r=>r.id==='billplan-'+month);
+ return categories.Savings.map(category=>{
+  const key=savingsTargetKey[category];
+  const saved=periodRows.reduce((n,r)=>n+(r.kind==='transaction'&&r.payload.group==='Savings'&&r.payload.category===category?r.payload.amount:0),0);
+  return {category,key,saved,target:plan?.payload?.[key]||0};
+ });
+}
 export const money=(n:number)=>new Intl.NumberFormat('en-PH',{style:'decimal',minimumFractionDigits:2,maximumFractionDigits:2}).format(n/100);
 export function today(){return new Intl.DateTimeFormat('en-CA',{timeZone:'Asia/Manila',year:'numeric',month:'2-digit',day:'2-digit'}).format(new Date());}
 export function totals(rows:Txn[]){return rows.reduce((a,t)=>{if(t.group in a)a[t.group as keyof typeof a]+=Math.abs(t.amount);if(t.group==='Transfer')a.transferFees+=(t.fee||0);return a;},{Income:0,Expenses:0,Bills:0,Savings:0,Transfer:0,Adjustment:0,transferFees:0});}
