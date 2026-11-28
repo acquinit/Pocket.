@@ -61,4 +61,5 @@ body :is(.eyebrow,.sidebar-caption,.capture-note,.sidebar-bottom>a,.private-card
 .theme-float{position:fixed;top:8px;right:40px;z-index:41}
 @media(max-width:850px){.theme-float{right:16px;top:8px}}
 @media(min-width:851px){.theme-float{display:none}}
+.savings-goals .bill-saving{display:block;width:100%;padding:0;border:0;background:none;text-align:left;color:inherit}
 
