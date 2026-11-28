@@ -21,6 +21,44 @@ const monthLabel=(s:string)=>new Date(s+'-01T12:00:00').toLocaleDateString('en-P
 function Icon({name,size=18}:{name:string;size?:number}){const I=icons[name]||Coins;return <I size={size}/>;}
 function DecodeText({text}:{text:string}){const [revealed,setRevealed]=useState(0);useEffect(()=>{const t=setInterval(()=>setRevealed(r=>r>=text.length?r:Math.min(r+1,text.length)),50);return()=>clearInterval(t)},[]);return <span>{text.split('').map((c,i)=>i<revealed?c:String.fromCharCode(33+(i*7)%94)).join('')}</span>;}
 function CountUp({target}:{target:number}){const ref=useRef<HTMLSpanElement>(null);const [v,setV]=useState(0);const [done,setDone]=useState(false);function run(){if(done)return;if(window.matchMedia('(prefers-reduced-motion: reduce)').matches){setV(target);setDone(true);return}const start=performance.now();const dur=1500;const ease=(t:number)=>1-Math.pow(1-t,4);const r=()=>{const now=performance.now();const t=Math.min((now-start)/dur,1);setV(ease(t)*target);if(t<1)requestAnimationFrame(r);else setDone(true)};requestAnimationFrame(r)}useEffect(()=>{if(done)return;const el=ref.current;if(!el)return;const io=new IntersectionObserver(([e])=>{if(e.isIntersecting){run();io.disconnect()}},{threshold:0.1});io.observe(el);return()=>io.disconnect()},[target,done]);return <span ref={ref}>{money(Math.round(v))}</span>;}
+type MobileTabItem={label:string;icon:React.ComponentType<{size?:number}>;active:boolean;onClick:()=>void};
+function MobileTabBar({tabs,moreOpen,onAdd}:{tabs:MobileTabItem[];moreOpen:boolean;onAdd:()=>void}){
+ const navRef=useRef<HTMLElement>(null),pathRef=useRef<SVGPathElement>(null),circleRef=useRef<HTMLSpanElement>(null);
+ const x=useRef(0),v=useRef(0),target=useRef(0),w=useRef(0),h=useRef(0),raf=useRef(0),ready=useRef(false);
+ const [fading,setFading]=useState<{icon:React.ComponentType<{size?:number}>;key:number}|null>(null);
+ const prevIcon=useRef<{icon:React.ComponentType<{size?:number}>;key:number}|null>(null);
+ const activeIndex=tabs.findIndex(t=>t.active),ActiveIcon=tabs[activeIndex]?.icon||MoreHorizontal;
+ useEffect(()=>{
+  const nav=navRef.current,path=pathRef.current,circle=circleRef.current;
+  if(!nav||!path||!circle)return;
+  const reduce=window.matchMedia('(prefers-reduced-motion: reduce)').matches,R=28,CY=6,HW=Math.sqrt(R*R-CY*CY);
+  const draw=()=>{const cx=Math.max(HW,Math.min(w.current-HW,x.current));x.current=cx;path.setAttribute('d',`M0 0 H${(cx-HW).toFixed(2)} A ${R} ${R} 0 1 0 ${(cx+HW).toFixed(2)} 0 H${w.current.toFixed(2)} V${h.current.toFixed(2)} H0 Z`);circle.style.transform=`translateX(${cx.toFixed(2)}px)`};
+  const tick=()=>{v.current+=(target.current-x.current)*.2;v.current*=.74;x.current+=v.current;draw();if(Math.abs(target.current-x.current)>.1||Math.abs(v.current)>.1)raf.current=requestAnimationFrame(tick);else{x.current=target.current;v.current=0;draw();raf.current=0}};
+  const start=()=>{if(reduce){x.current=target.current;v.current=0;draw();return}if(!raf.current)raf.current=requestAnimationFrame(tick)};
+  const measure=()=>{const rect=nav.getBoundingClientRect(),btn=nav.querySelector<HTMLElement>(`[data-tab="${activeIndex}"]`);if(!btn)return;const br=btn.getBoundingClientRect();w.current=rect.width;h.current=rect.height;target.current=br.left-rect.left+br.width/2;if(!ready.current){x.current=target.current;ready.current=true;draw()}else start()};
+  measure();
+  const ro=new ResizeObserver(measure);ro.observe(nav);
+  return ()=>{ro.disconnect();if(raf.current){cancelAnimationFrame(raf.current);raf.current=0}};
+ },[activeIndex]);
+ useEffect(()=>{
+  const previous=prevIcon.current;
+  if(!previous){prevIcon.current={icon:ActiveIcon,key:activeIndex};return}
+  if(previous.key===activeIndex)return;
+  setFading(previous);prevIcon.current={icon:ActiveIcon,key:activeIndex};
+  const timer=setTimeout(()=>setFading(null),200);
+  return ()=>clearTimeout(timer);
+ },[activeIndex,ActiveIcon]);
+ const FadingIcon=fading?.icon;
+ return <nav className="mobile-nav" aria-label="Main navigation" ref={navRef}>
+  <span className="mobile-bar-bg" aria-hidden="true"><svg><path ref={pathRef} fill="var(--panel)"/></svg></span>
+  <span className="mobile-notch-circle" ref={circleRef} aria-hidden="true">
+   {fading&&FadingIcon?<span className="notch-icon out" key={'out-'+fading.key}><FadingIcon size={22}/></span>:null}
+   <span className="notch-icon" key={activeIndex}><ActiveIcon size={22}/></span>
+  </span>
+  {tabs.map((t,i)=><button key={t.label} data-tab={i} className={'mobile-tab'+(t.active?' active':'')} aria-current={t.active?'page':undefined} aria-expanded={t.label==='More'?moreOpen:undefined} aria-haspopup={t.label==='More'?'dialog':undefined} onClick={t.onClick}><span className="tab-icon"><t.icon size={20}/></span><span className="tab-label">{t.label}</span></button>)}
+  <button className="mobile-tab mobile-add-tab" onClick={onAdd} aria-label="Quick Add"><Plus size={20}/><span className="tab-label">Add</span></button>
+ </nav>;
+}
 function Modal({title,close,children}:{title:string;close:()=>void;children:React.ReactNode}){const ref=useRef<HTMLDialogElement>(null),titleId=useId();useEffect(()=>{const trigger=document.activeElement as HTMLElement;const dialog=ref.current;dialog?.showModal();return()=>{dialog?.close();if(trigger?.isConnected)trigger.focus({preventScroll:true})}},[]);return <dialog aria-labelledby={titleId} ref={ref} onCancel={e=>{e.preventDefault();close()}}><div className="modal-head"><div><h2 id={titleId}>{title}</h2></div><button className="icon-button" onClick={close} aria-label="Close dialog"><X size={21}/></button></div>{children}</dialog>;}
 export default function BudgetApp(){
  const [rows,setRows]=useState<RecordRow[]>([]),[view,setView]=useState('Overview'),[month,setMonth]=useState(today().slice(0,7)),[loading,setLoading]=useState(true),[message,setMessage]=useState(''),[busy,setBusy]=useState(false);
@@ -50,6 +88,8 @@ export default function BudgetApp(){
  const todaySpent=all.filter(r=>r.payload.date===today()&&['Expenses','Bills'].includes(r.payload.group)).reduce((n,r)=>n+r.payload.amount,0);
  const nav=[{label:'Overview',icon:LayoutDashboard},{label:'Transactions',icon:ReceiptText},{label:'Monthly bills',icon:CalendarDays},{label:'Reports',icon:ChartNoAxesCombined},{label:'My accounts',icon:Wallet},{label:'Templates',icon:Bookmark},{label:'Budget & savings',icon:Target}];
  const activeIndex=nav.findIndex(n=>n.label===view);
+  const moreActive=nav.slice(2).some(n=>n.label===view&&n.label!=='My accounts');
+  const mobileTabs=[{label:'Overview',icon:LayoutDashboard,active:view==='Overview',onClick:()=>setView('Overview')},{label:'Transactions',icon:ReceiptText,active:view==='Transactions',onClick:()=>setView('Transactions')},{label:'Accounts',icon:Wallet,active:view==='My accounts',onClick:()=>setView('My accounts')},{label:'More',icon:MoreHorizontal,active:moreActive,onClick:()=>setMoreOpen(true)}];
  function shift(d:number){const date=new Date(month+'-01T12:00:00');date.setMonth(date.getMonth()+d);setMonth(date.getFullYear()+'-'+String(date.getMonth()+1).padStart(2,'0'))}
  function openForm(kind='transaction',row?:RecordRow,defaults:any={}){setFormError('');setEditor({kind,id:row?.id||crypto.randomUUID(),isExisting:!!row,version:row?.version||0});setForm({group:'Expenses',category:'Food',...(kind==='transaction'&&!row?manilaTimestamp():{date:today()}),note:'',name:'',account:'',fromAccount:'Security Bank',toAccount:'',fee:'',...defaults,...row?.payload,amount:row?String(row.payload.amount/100):defaults.amount?String(defaults.amount/100):''})}
  const templateLock=useRef(false),templateAttempt=useRef<{template:string;body:any}|null>(null);
@@ -100,7 +140,7 @@ export default function BudgetApp(){
  </>}
  <footer><span><Wallet size={13}/>Pocket · Personal budget</span><span>Private by design. Made for you.</span></footer>
  </div></main>
- <nav className="mobile-nav" aria-label="Main navigation">{nav.filter(n=>['Overview','Transactions','My accounts'].includes(n.label)).map(({label,icon:I})=><button key={label} className={view===label?'active':''} aria-current={view===label?'page':undefined} onClick={()=>setView(label)}><I size={21}/><span>{label==='My accounts'?'Accounts':label==='Monthly bills'?'Bills':label}</span></button>)}<button className={nav.slice(2).some(n=>n.label===view&&n.label!=='My accounts')?'active':''} aria-expanded={moreOpen} aria-haspopup="dialog" onClick={()=>setMoreOpen(true)}><MoreHorizontal size={21}/><span>More</span></button></nav><button className="mobile-add" aria-label="Quick Add" onClick={()=>{triggerScroll.current=window.scrollY;setQuickOpen(true)}}><Plus size={25}/></button>
+ <MobileTabBar tabs={mobileTabs} moreOpen={moreOpen} onAdd={()=>{triggerScroll.current=window.scrollY;setQuickOpen(true)}}/>
  {moreOpen&&<Modal title="More pages" close={()=>setMoreOpen(false)}><div className="sheet-menu">{nav.filter(n=>!['Overview','Transactions','My accounts'].includes(n.label)).map(({label,icon:I})=><button key={label} className="secondary" aria-current={view===label?'page':undefined} onClick={()=>{setMoreOpen(false);setView(label);window.scrollTo(0,0)}}><I size={18}/>{label}</button>)}</div></Modal>}
  {quickOpen&&<Modal title="Quick Add" close={()=>{if(!busy)closeQuick()}}><div className="quick-sheet"><p>Record an expense in seconds</p><QuickCapture write={write} busy={busy} count={0} review={()=>{}} onRecorded={id=>{setRecentCapture(id);setMessage('');closeQuick()}}/><button className="secondary" disabled={busy} onClick={()=>{setQuickOpen(false);openForm()}}>Detailed transaction <ChevronRight size={16}/></button></div></Modal>}
  {recentCapture&&<div className="capture-toast" role="status"><span>Expense recorded</span><button className="text-button" disabled={!rows.some(r=>r.id===recentCapture)} onClick={()=>{const row=rows.find(r=>r.id===recentCapture);if(row){setRecentCapture('');openForm('transaction',row)}}}>Edit</button><button className="icon-button" aria-label="Dismiss confirmation" onClick={()=>setRecentCapture('')}><X size={16}/></button></div>}

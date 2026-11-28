@@ -4,6 +4,7 @@ import './refinement.css';
 import './ledger-polish.css';
 import './mobile.css';
 import './flourish.css';
+import './mobile-notch.css';
 import ContourBackground from './contour-background';
 import CursorTrail from './cursor-trail';
 export const viewport={width:'device-width',initialScale:1,viewportFit:'cover',interactiveWidget:'resizes-content' as const};
